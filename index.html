@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Pemecah Soal Matematika (Sederhana)</title>
+  <title>AI Pemecah Soal Matematika</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -13,12 +13,9 @@
       --muted: #99a2c7;
       --danger: #ff6b6b;
     }
-    * { box-sizing: border-box; }
     body {
-      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
-      background: radial-gradient(1200px 600px at 20% -10%, #1b2250 0%, transparent 60%),
-                  radial-gradient(1000px 500px at 120% 20%, #1b3a5a 0%, transparent 60%),
-                  var(--bg);
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: grid;
@@ -28,10 +25,12 @@
     .app {
       width: 100%; max-width: 840px; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
       border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 24px; padding: 20px 20px 16px; backdrop-filter: blur(6px);
+      border-radius: 24px; padding: 20px; backdrop-filter: blur(6px);
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      position: relative;
     }
-    .header { display:flex; gap:12px; align-items:center; margin-bottom: 10px; }
+    .header { display:flex; justify-content: space-between; align-items:center; }
+    .title { display:flex; gap:12px; align-items:center; }
     .logo { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background: #0f1430; border:1px solid rgba(255,255,255,.08); }
     .logo span { font-weight: 800; color: var(--accent); }
     h1 { font-size: 22px; margin: 0; }
@@ -39,38 +38,26 @@
 
     .row { display:grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 14px; }
     textarea {
-      width: 100%; min-height: 90px; resize: vertical; border-radius: 16px; padding: 14px 16px; font-size: 16px; line-height: 1.5;
-      color: var(--text);
-      background: var(--card);
-      border: 1px solid rgba(255,255,255,0.08);
-      outline: none;
+      width: 100%; min-height: 90px; resize: vertical; border-radius: 16px; padding: 14px 16px; font-size: 16px;
+      color: var(--text); background: var(--card); border: 1px solid rgba(255,255,255,0.08);
     }
-    .btn {
-      align-self: start; height: 44px; padding: 0 16px; border-radius: 12px; border: none; font-weight: 700; letter-spacing: .3px;
-      background: linear-gradient(180deg, var(--accent), #48cfa0);
-      color: #032014; cursor: pointer; box-shadow: 0 10px 20px rgba(110,231,183,0.25);
-    }
+    .btn { align-self:start; height:44px; padding:0 16px; border-radius:12px; border:none; font-weight:700;
+      background:linear-gradient(180deg, var(--accent), #48cfa0); color:#032014; cursor:pointer; }
     .btn:active { transform: translateY(1px); }
-    .examples { margin-top: 12px; color: var(--muted); font-size: 13px; }
-    .examples button { background: transparent; border: 1px dashed rgba(255,255,255,0.18); color: var(--text); padding: 6px 10px; border-radius: 10px; cursor: pointer; margin-right: 8px; margin-top: 8px; }
 
-    .result { margin-top: 16px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px; }
-    .grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
-    .card { background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 12px; }
-    .muted { color: var(--muted); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .result { margin-top: 16px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px; white-space: pre-line; }
     .error { color: var(--danger); font-weight: 700; }
-    .small { font-size: 13px; }
-    .footer { margin-top: 12px; color: var(--muted); font-size: 12px; text-align: center; }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="header">
-      <div class="logo"><span>AI</span></div>
-      <div>
-        <h1>AI Pemecah Soal Matematika</h1>
-        <div class="sub">Ketik ekspresi (mis. <span class="mono">8*8</span> atau <span class="mono">(12+3)*5-4^2</span>). AI akan hitung dan jelaskan langkah-langkahnya.</div>
+      <div class="title">
+        <div class="logo"><span>AI</span></div>
+        <div>
+          <h1 id="modeTitle">AI Pemecah Soal Matematika</h1>
+          <div class="sub" id="modeSub">Mode: Kalkulator Matematika</div>
+        </div>
       </div>
     </div>
 
@@ -79,181 +66,28 @@
       <button class="btn" id="solve">Solve ➜</button>
     </div>
 
-    <div class="examples small">
-      Contoh cepat:
-      <button data-eg="8*8">8*8</button>
-      <button data-eg="(12+3)*5-4^2">(12+3)*5-4^2</button>
-      <button data-eg="7+8/2">7+8/2</button>
-      <button data-eg="3.5*(2+1.5)">3.5*(2+1.5)</button>
-    </div>
-
-    <div id="out" class="result" hidden>
-      <div class="grid">
-        <div class="card">
-          <div class="muted small">Hasil</div>
-          <div id="answer" class="mono" style="font-size: 20px; font-weight: 800; margin-top:4px;">—</div>
-        </div>
-        <div class="card">
-          <div class="muted small">Penjelasan langkah</div>
-          <ol id="steps" class="small"></ol>
-        </div>
-        <div class="card">
-          <div class="muted small">Ekspresi dibaca sebagai</div>
-          <div id="normalized" class="mono small"></div>
-        </div>
-      </div>
-    </div>
-
+    <div id="out" class="result" hidden></div>
     <div id="err" class="result error" hidden></div>
-
-    <div class="footer">Catatan: Mendukung operasi dasar <span class="mono">+ - * / ^</span> dan tanda kurung. Menggunakan parser internal (bukan <em>eval</em>), sehingga aman untuk dijalankan lokal.</div>
   </div>
 
   <script>
-    // === Tokenizer & Parser (Shunting-Yard) ===
-    const OPS = {
-      '+': {prec: 1, assoc: 'L', fn: (a,b) => a + b, label: (a,b,r)=>`Hitung ${a} + ${b} = ${r}`},
-      '-': {prec: 1, assoc: 'L', fn: (a,b) => a - b, label: (a,b,r)=>`Hitung ${a} - ${b} = ${r}`},
-      '*': {prec: 2, assoc: 'L', fn: (a,b) => a * b, label: (a,b,r)=>`Perkalian ${a} × ${b} = ${r}`},
-      '/': {prec: 2, assoc: 'L', fn: (a,b) => a / b, label: (a,b,r)=>`Pembagian ${a} ÷ ${b} = ${r}`},
-      '^': {prec: 3, assoc: 'R', fn: (a,b) => Math.pow(a,b), label: (a,b,r)=>`Pangkat ${a}^${b} = ${r}`},
-    };
+    const expr = document.getElementById('expr');
+    const out = document.getElementById('out');
+    const err = document.getElementById('err');
 
-    function tokenize(input){
-      // Allow digits, decimal dot, operators, parentheses, spaces
-      const ok = /^[0-9+\-*/^().\s]+$/;
-      if(!ok.test(input)) throw new Error('Hanya angka, spasi, dan operator + - * / ^ ( ) yang diperbolehkan.');
+    document.getElementById('solve').addEventListener('click',()=>{
+      err.hidden=true; out.hidden=true;
+      let q = expr.value.trim();
+      if(!q){ err.textContent='⚠️ Tolong isi soal'; err.hidden=false; return; }
 
-      const tokens = [];
-      let i = 0;
-      const s = input.replace(/\s+/g,'');
-      while(i < s.length){
-        const ch = s[i];
-        if(/[0-9.]/.test(ch)){
-          let j = i+1;
-          while(j < s.length && /[0-9.]/.test(s[j])) j++;
-          const num = s.slice(i,j);
-          if((num.match(/\./g)||[]).length > 1) throw new Error('Format desimal tidak valid.');
-          tokens.push({type:'num', value: parseFloat(num)});
-          i = j; continue;
-        }
-        if(ch in OPS){
-          // handle unary minus: if '-' and (start or prev is '(' or operator), treat as 0 - ...
-          if(ch === '-'){
-            const prev = tokens[tokens.length-1];
-            if(!prev || (prev.type==='op' || (prev.type==='paren' && prev.value==='('))){
-              // unary minus -> push 0 then '-'
-              tokens.push({type:'num', value: 0});
-            }
-          }
-          tokens.push({type:'op', value: ch}); i++; continue;
-        }
-        if(ch==='(' || ch===')'){ tokens.push({type:'paren', value: ch}); i++; continue; }
-        throw new Error('Token tidak dikenal: ' + ch);
-      }
-      return tokens;
-    }
-
-    function toRPN(tokens){
-      const out = [], stack = [];
-      for(const t of tokens){
-        if(t.type==='num'){ out.push(t); }
-        else if(t.type==='op'){
-          const o1 = OPS[t.value];
-          while(stack.length){
-            const top = stack[stack.length-1];
-            if(top.type==='op'){
-              const o2 = OPS[top.value];
-              if( (o1.assoc==='L' && o1.prec <= o2.prec) || (o1.assoc==='R' && o1.prec < o2.prec) ){
-                out.push(stack.pop());
-                continue;
-              }
-            }
-            break;
-          }
-          stack.push(t);
-        } else if(t.type==='paren' && t.value==='('){ stack.push(t); }
-        else if(t.type==='paren' && t.value===')'){
-          let found = false;
-          while(stack.length){
-            const top = stack.pop();
-            if(top.type==='paren' && top.value==='('){ found = true; break; }
-            out.push(top);
-          }
-          if(!found) throw new Error('Tanda kurung tidak seimbang.');
-        }
-      }
-      while(stack.length){
-        const t = stack.pop();
-        if(t.type==='paren') throw new Error('Tanda kurung tidak seimbang.');
-        out.push(t);
-      }
-      return out;
-    }
-
-    function evalRPN(rpn){
-      const st = []; const steps = [];
-      for(const t of rpn){
-        if(t.type==='num') st.push(t.value);
-        else if(t.type==='op'){
-          const b = st.pop(); const a = st.pop();
-          if(a===undefined || b===undefined) throw new Error('Ekspresi tidak valid.');
-          if(t.value==='/' && b===0) throw new Error('Tidak bisa membagi dengan nol.');
-          const r = OPS[t.value].fn(a,b);
-          steps.push(OPS[t.value].label(formatNum(a), formatNum(b), formatNum(r)));
-          st.push(r);
-        }
-      }
-      if(st.length !== 1) throw new Error('Ekspresi tidak valid.');
-      return {result: st[0], steps};
-    }
-
-    function formatNum(n){
-      // show up to 10 significant digits, trim trailing zeros
-      let s = Number(n).toPrecision(10);
-      if(s.indexOf('e')>=0) return s; // scientific form, leave it
-      s = s.replace(/\.0+$/,'').replace(/(\.[0-9]*?)0+$/,'$1');
-      if(s.endsWith('.')) s = s.slice(0,-1);
-      return s;
-    }
-
-    function normalize(tokens){
-      return tokens.map(t => t.type==='num' ? formatNum(t.value) : t.value).join(' ');
-    }
-
-    const $ = sel => document.querySelector(sel);
-    const exprEl = $('#expr');
-    const outEl = $('#out');
-    const ansEl = $('#answer');
-    const stepsEl = $('#steps');
-    const normEl = $('#normalized');
-    const errEl = $('#err');
-
-    document.getElementById('solve').addEventListener('click', solve);
-    document.querySelectorAll('[data-eg]').forEach(btn=>btn.addEventListener('click', e=>{
-      exprEl.value = e.currentTarget.getAttribute('data-eg');
-      solve();
-    }));
-
-    function solve(){
-      errEl.hidden = true; outEl.hidden = true; stepsEl.innerHTML='';
       try{
-        const input = exprEl.value.trim();
-        if(!input) throw new Error('Tolong masukkan ekspresi matematika.');
-        const tokens = tokenize(input);
-        const rpn = toRPN(tokens);
-        const {result, steps} = evalRPN(rpn);
-        ansEl.textContent = formatNum(result);
-        normEl.textContent = normalize(tokens);
-        steps.forEach(s=>{
-          const li = document.createElement('li'); li.textContent = s; stepsEl.appendChild(li);
-        });
-        outEl.hidden = false;
-      } catch(e){
-        errEl.textContent = '⚠️ ' + e.message;
-        errEl.hidden = false;
-      }
-    }
+        // Ganti simbol × dan ÷ dengan * dan /
+        let exprVal = q.replace(/×/g, '*').replace(/÷/g, '/');
+        const result = eval(exprVal);
+        out.textContent = 'Jawaban: ' + result;
+        out.hidden=false;
+      }catch(e){ err.textContent='⚠️ Ekspresi salah'; err.hidden=false; }
+    });
   </script>
 </body>
 </html>
