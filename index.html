@@ -36,6 +36,7 @@
     h1 { font-size: 22px; margin: 0; }
     .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
+    /* Hamburger menu */
     .menu-btn { cursor:pointer; width:32px; height:24px; display:flex; flex-direction:column; justify-content:space-between; }
     .menu-btn span { display:block; height:4px; background:var(--text); border-radius:2px; }
     .menu { position:absolute; top:60px; right:20px; background:var(--card); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px; display:none; }
@@ -94,25 +95,34 @@
     const err = document.getElementById('err');
     let currentMode = 'math';
 
-    // Map simbol pecahan Unicode → bentuk biasa
+    // Peta untuk mengganti simbol Unicode pecahan ke bentuk a/b
     const fractionMap = {
-      '½': '1/2','⅓': '1/3','⅔': '2/3','¼': '1/4','¾': '3/4',
-      '⅕': '1/5','⅖': '2/5','⅗': '3/5','⅘': '4/5',
-      '⅙': '1/6','⅚': '5/6',
-      '⅛': '1/8','⅜': '3/8','⅝': '5/8','⅞': '7/8'
+      '½': '1/2',
+      '⅓': '1/3',
+      '⅔': '2/3',
+      '¼': '1/4',
+      '¾': '3/4',
+      '⅕': '1/5',
+      '⅖': '2/5',
+      '⅗': '3/5',
+      '⅘': '4/5',
+      '⅙': '1/6',
+      '⅚': '5/6',
+      '⅛': '1/8',
+      '⅜': '3/8',
+      '⅝': '5/8',
+      '⅞': '7/8'
     };
 
-    // Ubah hasil desimal jadi pecahan sederhana
-    function toFraction(decimal, tolerance = 1.0E-6) {
-      if (Math.abs(decimal % 1) < tolerance) return decimal.toString();
-      let num = decimal, denom = 1;
-      while (Math.abs(num - Math.round(num)) > tolerance) {
-        num *= 10;
-        denom *= 10;
+    function normalizeInput(input){
+      let q = input.trim();
+      // Ganti simbol hp → js
+      q = q.replace(/×/g,'*').replace(/÷/g,'/');
+      // Ganti pecahan unicode → a/b
+      for(const [sym, frac] of Object.entries(fractionMap)){
+        q = q.replace(new RegExp(sym,'g'), frac);
       }
-      let gcd = (a,b)=>b ? gcd(b,a%b):a;
-      let g = gcd(Math.round(num), denom);
-      return (Math.round(num)/g) + "/" + (denom/g);
+      return q;
     }
 
     menuBtn.addEventListener('click',()=>{
@@ -140,37 +150,51 @@
 
     document.getElementById('solve').addEventListener('click',()=>{
       err.hidden=true; out.hidden=true;
-      let q = expr.value.trim();
+      let q = expr.value;
       if(!q){ err.textContent='⚠️ Tolong isi soal'; err.hidden=false; return; }
-
-      // Normalisasi input
-      q = q.replace(/×/g, '*').replace(/÷/g, '/');
-      for(const [sym, frac] of Object.entries(fractionMap)){
-        q = q.replaceAll(sym, frac);
-      }
-      const lowerQ = q.toLowerCase();
+      q = normalizeInput(q.toLowerCase());
 
       if(currentMode==='math'){
         try{
-          const result = eval(q);
-          const frac = toFraction(result);
-          out.textContent = 'Jawaban: ' + frac + ' ≈ ' + result;
+          // Evaluasi pecahan dengan math.js style pakai Function
+          let result = eval(q);
+          if(Number.isFinite(result)){
+            // Jika desimal panjang, coba sederhanakan jadi pecahan
+            if(!Number.isInteger(result)){
+              function toFraction(x){
+                const tolerance = 1.0E-10;
+                let h1=1, h2=0, k1=0, k2=1, b=x;
+                do {
+                  let a = Math.floor(b);
+                  let aux = h1; h1 = a*h1+h2; h2 = aux;
+                  aux = k1; k1 = a*k1+k2; k2 = aux;
+                  b = 1/(b-a);
+                } while (Math.abs(x-h1/k1) > x*tolerance);
+                return h1+"/"+k1;
+              }
+              out.textContent = 'Jawaban: ' + toFraction(result);
+            } else {
+              out.textContent = 'Jawaban: ' + result;
+            }
+          } else {
+            out.textContent = 'Hasil tidak valid';
+          }
           out.hidden=false;
         }catch(e){ err.textContent='⚠️ Ekspresi salah'; err.hidden=false; }
       }
       else if(currentMode==='kelas6-math'){
-        if(lowerQ.includes('volume') || lowerQ.includes('v2')){
+        if(q.includes('volume') || q.includes('v2')){
           let jawaban = '';
-          if(lowerQ.includes('kubus')){
+          if(q.includes('kubus')){
             jawaban = 'Rumus volume kubus = sisi × sisi × sisi.\nContoh: sisi = 4 cm → V = 4 × 4 × 4 = 64 cm³';
-          } else if(lowerQ.includes('balok')){
+          } else if(q.includes('balok')){
             jawaban = 'Rumus volume balok = p × l × t.\nContoh: p=5, l=3, t=2 → V = 5 × 3 × 2 = 30 cm³';
           } else {
             jawaban = 'Volume bangun ruang umumnya dihitung dengan rumus tertentu, misalnya kubus atau balok.';
           }
           out.textContent = jawaban;
         }
-        else if(lowerQ.includes('pecahan')){
+        else if(q.includes('pecahan')){
           out.textContent = 'Contoh: 1/2 + 1/4 = 3/4';
         } else {
           out.textContent = 'AI Kelas 6 Matematika: Soal belum dikenali, coba sebutkan kata kunci seperti "volume kubus" atau "pecahan".';
@@ -178,9 +202,9 @@
         out.hidden=false;
       }
       else if(currentMode==='kelas6-eng'){
-        if(lowerQ.includes('translate')){
+        if(q.toLowerCase().includes('translate')){
           out.textContent = 'Misal: Translate "book" = "buku"';
-        } else if(lowerQ.includes('verb')){
+        } else if(q.includes('verb')){
           out.textContent = 'Contoh verb (kata kerja): go, eat, write, read';
         } else {
           out.textContent = 'AI Kelas 6 Bahasa Inggris: Soal belum dikenali, coba gunakan kata kunci "translate" atau "verb".';
