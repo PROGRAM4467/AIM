@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Pemecah Soal Matematika</title>
+  <title>AI Multi-Mode (Math & Kelas 6)</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -36,6 +36,12 @@
     h1 { font-size: 22px; margin: 0; }
     .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
+    .menu-btn { cursor:pointer; width:32px; height:24px; display:flex; flex-direction:column; justify-content:space-between; }
+    .menu-btn span { display:block; height:4px; background:var(--text); border-radius:2px; }
+    .menu { position:absolute; top:60px; right:20px; background:var(--card); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px; display:none; }
+    .menu button { display:block; width:100%; background:transparent; border:none; color:var(--text); padding:8px 12px; text-align:left; cursor:pointer; }
+    .menu button:hover { background:rgba(255,255,255,0.08); }
+
     .row { display:grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 14px; }
     textarea {
       width: 100%; min-height: 90px; resize: vertical; border-radius: 16px; padding: 14px 16px; font-size: 16px;
@@ -59,6 +65,14 @@
           <div class="sub" id="modeSub">Mode: Kalkulator Matematika</div>
         </div>
       </div>
+      <div class="menu-btn" id="menuBtn">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="menu" id="menu">
+        <button data-mode="math">AI Matematika</button>
+        <button data-mode="kelas6-math">AI Kelas 6 - Matematika</button>
+        <button data-mode="kelas6-eng">AI Kelas 6 - Bahasa Inggris</button>
+      </div>
     </div>
 
     <div class="row">
@@ -71,22 +85,108 @@
   </div>
 
   <script>
+    const menuBtn = document.getElementById('menuBtn');
+    const menu = document.getElementById('menu');
+    const modeTitle = document.getElementById('modeTitle');
+    const modeSub = document.getElementById('modeSub');
     const expr = document.getElementById('expr');
     const out = document.getElementById('out');
     const err = document.getElementById('err');
+    let currentMode = 'math';
+
+    // Map simbol pecahan Unicode → bentuk biasa
+    const fractionMap = {
+      '½': '1/2','⅓': '1/3','⅔': '2/3','¼': '1/4','¾': '3/4',
+      '⅕': '1/5','⅖': '2/5','⅗': '3/5','⅘': '4/5',
+      '⅙': '1/6','⅚': '5/6',
+      '⅛': '1/8','⅜': '3/8','⅝': '5/8','⅞': '7/8'
+    };
+
+    // Ubah hasil desimal jadi pecahan sederhana
+    function toFraction(decimal, tolerance = 1.0E-6) {
+      if (Math.abs(decimal % 1) < tolerance) return decimal.toString();
+      let num = decimal, denom = 1;
+      while (Math.abs(num - Math.round(num)) > tolerance) {
+        num *= 10;
+        denom *= 10;
+      }
+      let gcd = (a,b)=>b ? gcd(b,a%b):a;
+      let g = gcd(Math.round(num), denom);
+      return (Math.round(num)/g) + "/" + (denom/g);
+    }
+
+    menuBtn.addEventListener('click',()=>{
+      menu.style.display = menu.style.display==='block' ? 'none' : 'block';
+    });
+
+    menu.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        currentMode = btn.dataset.mode;
+        menu.style.display='none';
+        if(currentMode==='math'){
+          modeTitle.textContent = 'AI Pemecah Soal Matematika';
+          modeSub.textContent = 'Mode: Kalkulator Matematika';
+        } else if(currentMode==='kelas6-math'){
+          modeTitle.textContent = 'AI Kelas 6 - Matematika';
+          modeSub.textContent = 'Mode: Belajar Matematika SD Kelas 6 (termasuk Volume Kubus/Balok dll)';
+        } else if(currentMode==='kelas6-eng'){
+          modeTitle.textContent = 'AI Kelas 6 - Bahasa Inggris';
+          modeSub.textContent = 'Mode: Belajar Bahasa Inggris SD Kelas 6';
+        }
+        expr.value='';
+        out.hidden=true; err.hidden=true;
+      });
+    });
 
     document.getElementById('solve').addEventListener('click',()=>{
       err.hidden=true; out.hidden=true;
       let q = expr.value.trim();
       if(!q){ err.textContent='⚠️ Tolong isi soal'; err.hidden=false; return; }
 
-      try{
-        // Ganti simbol × dan ÷ dengan * dan /
-        let exprVal = q.replace(/×/g, '*').replace(/÷/g, '/');
-        const result = eval(exprVal);
-        out.textContent = 'Jawaban: ' + result;
+      // Normalisasi input
+      q = q.replace(/×/g, '*').replace(/÷/g, '/');
+      for(const [sym, frac] of Object.entries(fractionMap)){
+        q = q.replaceAll(sym, frac);
+      }
+      const lowerQ = q.toLowerCase();
+
+      if(currentMode==='math'){
+        try{
+          const result = eval(q);
+          const frac = toFraction(result);
+          out.textContent = 'Jawaban: ' + frac + ' ≈ ' + result;
+          out.hidden=false;
+        }catch(e){ err.textContent='⚠️ Ekspresi salah'; err.hidden=false; }
+      }
+      else if(currentMode==='kelas6-math'){
+        if(lowerQ.includes('volume') || lowerQ.includes('v2')){
+          let jawaban = '';
+          if(lowerQ.includes('kubus')){
+            jawaban = 'Rumus volume kubus = sisi × sisi × sisi.\nContoh: sisi = 4 cm → V = 4 × 4 × 4 = 64 cm³';
+          } else if(lowerQ.includes('balok')){
+            jawaban = 'Rumus volume balok = p × l × t.\nContoh: p=5, l=3, t=2 → V = 5 × 3 × 2 = 30 cm³';
+          } else {
+            jawaban = 'Volume bangun ruang umumnya dihitung dengan rumus tertentu, misalnya kubus atau balok.';
+          }
+          out.textContent = jawaban;
+        }
+        else if(lowerQ.includes('pecahan')){
+          out.textContent = 'Contoh: 1/2 + 1/4 = 3/4';
+        } else {
+          out.textContent = 'AI Kelas 6 Matematika: Soal belum dikenali, coba sebutkan kata kunci seperti "volume kubus" atau "pecahan".';
+        }
         out.hidden=false;
-      }catch(e){ err.textContent='⚠️ Ekspresi salah'; err.hidden=false; }
+      }
+      else if(currentMode==='kelas6-eng'){
+        if(lowerQ.includes('translate')){
+          out.textContent = 'Misal: Translate "book" = "buku"';
+        } else if(lowerQ.includes('verb')){
+          out.textContent = 'Contoh verb (kata kerja): go, eat, write, read';
+        } else {
+          out.textContent = 'AI Kelas 6 Bahasa Inggris: Soal belum dikenali, coba gunakan kata kunci "translate" atau "verb".';
+        }
+        out.hidden=false;
+      }
     });
   </script>
 </body>
